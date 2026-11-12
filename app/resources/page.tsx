@@ -8,12 +8,13 @@ import { Mermaid } from '@/components/code/Mermaid';
 import { CodeBlock } from '@/components/tutorial/MdxComponents';
 import { commandCheatsheets, configReferences, errorKnowledgeBase, faqEntries } from '@/data/cheatsheets';
 import { officialSources } from '@/data/official';
+import { siteUrl } from '@/lib/site';
 
 export const metadata: Metadata = {
   title: '资源中心',
   description: 'SAP BTP 常用命令速查、配置文件速查、错误代码与排错知识库、FAQ、官方学习资源与图片示意图说明。',
   keywords: ['CF CLI 命令速查', 'xs-security.json 示例', 'manifest.yml', 'mta.yaml', 'SAP BTP 排错'],
-  alternates: { canonical: '/resources' },
+  alternates: { canonical: siteUrl('/resources/') },
 };
 
 const anchors = [

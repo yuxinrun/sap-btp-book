@@ -4,8 +4,7 @@ import { Providers } from '@/components/common/Providers';
 import { SiteHeader } from '@/components/layout/SiteHeader';
 import { SiteFooter } from '@/components/layout/SiteFooter';
 import { buildSearchIndex } from '@/lib/content';
-
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://sap-btp-cn.example.com';
+import { siteUrl, SITE_URL } from '@/lib/site';
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -26,7 +25,7 @@ export const metadata: Metadata = {
   },
   twitter: { card: 'summary_large_image' },
   robots: { index: true, follow: true },
-  alternates: { canonical: '/' },
+  alternates: { canonical: siteUrl('/') },
 };
 
 export const viewport: Viewport = {

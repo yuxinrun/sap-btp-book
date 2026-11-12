@@ -5,12 +5,13 @@ import { Breadcrumbs } from '@/components/navigation/Breadcrumbs';
 import { StageProgress } from '@/components/learn/StageProgress';
 import { learningStages } from '@/data/learning-path';
 import { navIndex } from '@/data/navigation';
+import { siteUrl } from '@/lib/site';
 
 export const metadata: Metadata = {
   title: '六阶段学习路线',
   description: 'SAP BTP 六阶段学习路线：BTP 基础、BTP 管理、安全认证、应用开发、部署与集成、企业级实战，含学习目标、推荐教程、实战任务与完成进度。',
   keywords: ['SAP BTP 学习路线', 'BTP 入门', 'XSUAA 学习', 'CAP 学习', 'Cloud Foundry 学习'],
-  alternates: { canonical: '/learn' },
+  alternates: { canonical: siteUrl('/learn/') },
 };
 
 export default function LearnPage() {

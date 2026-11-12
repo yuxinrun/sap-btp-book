@@ -5,11 +5,12 @@ import { Breadcrumbs } from '@/components/navigation/Breadcrumbs';
 import { VideoEmbedTool } from '@/components/video/VideoEmbedTool';
 import { videoResources } from '@/data/videos';
 import { officialSources } from '@/data/official';
+import { siteUrl } from '@/lib/site';
 
 export const metadata: Metadata = {
   title: '视频中心',
   description: 'SAP BTP 官方视频与课程资源入口：SAP Technology YouTube 频道、SAP Developers、SAP Learning、SAP Community 与官方示例仓库。',
-  alternates: { canonical: '/videos' },
+  alternates: { canonical: siteUrl('/videos/') },
 };
 
 export default function VideosPage() {

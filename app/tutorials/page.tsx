@@ -5,11 +5,12 @@ import { Breadcrumbs } from '@/components/navigation/Breadcrumbs';
 import { TutorialCatalog } from '@/components/tutorials/TutorialCatalog';
 import { getAllTutorials } from '@/lib/content';
 import { navigation, totalTutorials } from '@/data/navigation';
+import { siteUrl } from '@/lib/site';
 
 export const metadata: Metadata = {
   title: '教程目录',
   description: '按 SAP BTP Cockpit 功能分组的完整中文教程目录，覆盖基础入门、Cockpit 管理、服务、Cloud Foundry、Spaces、HTML5、Connectivity、Security/XSUAA、用户角色、Entitlements 与用量分析。',
-  alternates: { canonical: '/tutorials' },
+  alternates: { canonical: siteUrl('/tutorials/') },
 };
 
 export default function TutorialsPage() {

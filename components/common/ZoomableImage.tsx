@@ -3,6 +3,7 @@
 import * as Dialog from '@radix-ui/react-dialog';
 import { X, ZoomIn } from 'lucide-react';
 import { useState } from 'react';
+import { withBasePath } from '@/lib/site';
 
 interface ZoomableImageProps {
   src: string;
@@ -21,7 +22,7 @@ export function ZoomableImage({ src, alt = '', caption }: ZoomableImageProps) {
           className="group relative block w-full cursor-zoom-in overflow-hidden rounded-lg border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={src} alt={alt} loading="lazy" className="mx-auto max-h-[520px] w-auto max-w-full object-contain" />
+          <img src={withBasePath(src)} alt={alt} loading="lazy" className="mx-auto max-h-[520px] w-auto max-w-full object-contain" />
           <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-md bg-white/90 px-2 py-1 text-xs text-slate-600 opacity-0 shadow transition-opacity group-hover:opacity-100 dark:bg-slate-900/90 dark:text-slate-300">
             <ZoomIn className="h-3.5 w-3.5" /> 点击放大
           </span>
@@ -42,7 +43,7 @@ export function ZoomableImage({ src, alt = '', caption }: ZoomableImageProps) {
               <X className="h-5 w-5" />
             </Dialog.Close>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={src} alt={alt} className="max-h-[88vh] max-w-[94vw] rounded-lg object-contain shadow-2xl" />
+            <img src={withBasePath(src)} alt={alt} className="max-h-[88vh] max-w-[94vw] rounded-lg object-contain shadow-2xl" />
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>

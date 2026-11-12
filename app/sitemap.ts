@@ -3,6 +3,9 @@ import { navIndex } from '@/data/navigation';
 import { projects } from '@/data/projects';
 import { getAllTutorials } from '@/lib/content';
 
+// output: 'export' 下 metadata route 必须显式声明为静态
+export const dynamic = 'force-static';
+
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://sap-btp-cn.example.com';
 
 export default function sitemap(): MetadataRoute.Sitemap {

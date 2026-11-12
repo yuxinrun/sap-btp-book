@@ -3,12 +3,13 @@ import { BookOpenText } from 'lucide-react';
 import { Breadcrumbs } from '@/components/navigation/Breadcrumbs';
 import { GlossaryList } from '@/components/glossary/GlossaryList';
 import { glossaryTerms } from '@/data/glossary';
+import { siteUrl } from '@/lib/site';
 
 export const metadata: Metadata = {
   title: '术语词典',
   description: 'SAP BTP 常用术语的中文解释与英文对照，覆盖账号与环境、服务与部署、身份与安全、开发与集成四大类。',
   keywords: ['SAP BTP 术语', 'XSUAA 是什么', 'Entitlements', 'Role Collection', 'VCAP_SERVICES'],
-  alternates: { canonical: '/glossary' },
+  alternates: { canonical: siteUrl('/glossary/') },
 };
 
 export default function GlossaryPage() {

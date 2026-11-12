@@ -6,6 +6,7 @@ import { Mermaid } from '@/components/code/Mermaid';
 import { ZoomableImage } from '@/components/common/ZoomableImage';
 import { YouTubeEmbed } from '@/components/video/YouTubeEmbed';
 import { cn } from '@/lib/utils';
+import { withBasePath } from '@/lib/site';
 
 function nodeToText(node: React.ReactNode): string {
   if (typeof node === 'string' || typeof node === 'number') return String(node);
@@ -109,7 +110,7 @@ export function VideoCard({ title, description, href, objectives }: { title: str
 function ExternalAnchor({ href, children }: { href?: string; children?: React.ReactNode }) {
   const external = href?.startsWith('http');
   return (
-    <a href={href} target={external ? '_blank' : undefined} rel={external ? 'noopener noreferrer' : undefined}>
+    <a href={external ? href : withBasePath(href ?? '')} target={external ? '_blank' : undefined} rel={external ? 'noopener noreferrer' : undefined}>
       {children}
     </a>
   );

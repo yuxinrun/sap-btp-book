@@ -16,6 +16,7 @@ import { mdxComponents } from '@/components/tutorial/MdxComponents';
 import { getTutorial, type Difficulty, type TocItem, type TutorialFrontmatter } from '@/lib/content';
 import { getAdjacent, getBreadcrumb, navIndex } from '@/data/navigation';
 import { officialSources } from '@/data/official';
+import { siteUrl } from '@/lib/site';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -34,7 +35,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     title: crumb.leaf.title,
     description: tutorial?.frontmatter.description ?? crumb.leaf.brief,
     keywords: tutorial?.frontmatter.keywords ?? [crumb.leaf.title, 'SAP BTP', crumb.group?.title ?? ''],
-    alternates: { canonical: `/docs/${id}` },
+    alternates: { canonical: siteUrl(`/docs/${id}/`) },
     openGraph: {
       title: crumb.leaf.title,
       description: tutorial?.frontmatter.description ?? crumb.leaf.brief,

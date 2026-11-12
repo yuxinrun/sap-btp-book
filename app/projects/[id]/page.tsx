@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { ArrowRight, BookOpen, CheckCircle2, Clock3, FileCode2, ListChecks, ShieldAlert, Users } from 'lucide-react';
 import { Breadcrumbs } from '@/components/navigation/Breadcrumbs';
 import { projectById, projects } from '@/data/projects';
+import { siteUrl } from '@/lib/site';
 
 interface Props { params: Promise<{ id: string }> }
 
@@ -19,7 +20,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: project.title,
     description: `${project.subtitle}。${project.goal}`,
     keywords: [project.title, 'SAP BTP 实战', ...project.stack],
-    alternates: { canonical: `/projects/${id}` },
+    alternates: { canonical: siteUrl(`/projects/${id}/`) },
   };
 }
 

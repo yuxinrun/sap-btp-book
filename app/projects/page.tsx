@@ -3,12 +3,13 @@ import Link from 'next/link';
 import { ArrowRight, Clock3, FolderGit2, Signal, Target, Users } from 'lucide-react';
 import { Breadcrumbs } from '@/components/navigation/Breadcrumbs';
 import { projects } from '@/data/projects';
+import { siteUrl } from '@/lib/site';
 
 export const metadata: Metadata = {
   title: '实战项目中心',
   description: '六个 SAP BTP 端到端实战项目：从零创建账号、Node.js 部署、XSUAA 登录认证、CAP + HANA Cloud、SAPUI5 应用部署、S/4HANA 集成。',
   keywords: ['SAP BTP 实战项目', 'XSUAA 登录', 'CAP HANA Cloud', 'SAPUI5 部署', 'Cloud Connector'],
-  alternates: { canonical: '/projects' },
+  alternates: { canonical: siteUrl('/projects/') },
 };
 
 const difficultyCls: Record<string, string> = {

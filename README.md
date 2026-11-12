@@ -191,9 +191,30 @@ MDX 中可用组件：`<Callout type="info|warning|danger|success|verify">`、`<
 3. 可选环境变量：`NEXT_PUBLIC_SITE_URL`（站点规范域名，用于 canonical 与 sitemap）。未设置时使用 `https://sap-btp-cn.example.com`，**上线前请务必改成真实域名**。
 4. 无需数据库：搜索索引在构建时生成，学习进度保存在浏览器 LocalStorage。
 
+### GitHub Pages（当前线上部署方式）
+
+仓库的 `.github/workflows/deploy-pages.yml` 会在推送 `main` 后自动构建并发布站点，地址为 `https://yuxinrun.github.io/sap-btp-book/`，自定义域名下为 `https://www.yuxin.run/sap-btp-book/`。
+
+> **首次部署必须在仓库 Settings → Pages → Build and deployment → Source 选择 `GitHub Actions`。** 之前 Pages 从 `main` 根目录发布，而仓库里只有源码、没有 `index.html`，于是 GitHub 把 `README.md` 用 Jekyll 渲染成了首页——这就是访问到 README 内容的原因。
+
+工作流用 `STATIC_EXPORT=1` 触发 `output: 'export'`，生成 `out/` 后由 `actions/deploy-pages` 发布；同时注入：
+
+| 变量 | 值 | 作用 |
+| --- | --- | --- |
+| `NEXT_PUBLIC_BASE_PATH` | `/sap-btp-book` | 项目页子路径，保证站内链接、图片与 `_next` 资源前缀正确 |
+| `NEXT_PUBLIC_SITE_URL` | `https://www.yuxin.run/sap-btp-book` | canonical / sitemap / Open Graph 的规范域名 |
+
+`public/.nojekyll` 会一并导出，用于禁用 Jekyll、避免 `_next` 目录被忽略。本地复现静态导出：
+
+```bash
+STATIC_EXPORT=1 NEXT_PUBLIC_BASE_PATH=/sap-btp-book NEXT_PUBLIC_SITE_URL=https://www.yuxin.run/sap-btp-book npm run build
+```
+
+产物在 `out/`，为带尾斜杠的纯静态页面目录。
+
 ### 标准 Node.js 环境
 
-`next.config.mjs` 已启用 `output: 'standalone'`：
+未设置 `STATIC_EXPORT` 时，`next.config.mjs` 保持 `output: 'standalone'`：
 
 ```bash
 npm ci
@@ -205,9 +226,9 @@ node .next/standalone/server.js
 
 默认监听 `3000`，可用 `PORT` / `HOSTNAME` 环境变量调整。若部署在反向代理后，请正确设置 `NEXT_PUBLIC_SITE_URL`。
 
-### 静态托管
+### 其它静态托管
 
-本站使用服务端读取 MDX 与静态生成，不建议使用纯静态文件托管；如需纯静态导出，需要改造内容读取层（当前依赖 `node:fs`）。
+直接使用 `out/` 静态产物即可；若挂在子路径下，构建时需设置 `NEXT_PUBLIC_BASE_PATH`。内容读取依赖 `node:fs`，但只在构建阶段执行，导出后不需要 Node 运行时。
 
 ---
 
