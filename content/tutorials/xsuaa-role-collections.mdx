@@ -1,0 +1,256 @@
+---
+title: Role Collection 与用户授权：从 Scope 到登录用户
+description: 完整讲解 User → Role Collection → Role → Scope 授权链路，Cockpit 中创建 Role Collection、分配用户、映射 IdP 组，以及权限不足的系统化排查。
+difficulty: 进阶
+duration: 40 分钟
+audience: BTP 管理员、安全管理员、Node.js / CAP 开发者
+keywords: [Role Collection, Role Template, Scope, 用户授权, Trust Configuration, 403]
+updated: 2026-11-10
+docVersion: SAP Help Portal「Role Collections / Users」当前版本
+objectives:
+  - 能画出 User → Role Collection → Role → Scope 的授权链路
+  - 能在 Cockpit 中创建 Role Collection 并分配给用户
+  - 能区分 401 与 403，并按顺序排查权限问题
+  - 能解释 IdP 组映射与手工分配的区别
+prerequisites:
+  - 已阅读「xs-security.json 完整配置」
+  - 已创建 XSUAA 实例并在 Cockpit 中看到应用 Role
+  - 拥有 Subaccount 的 Security 管理权限
+cockpitPath: Subaccount → Security → Role Collections / Roles / Users / Trust Configuration
+related: [xsuaa-scopes, xsuaa-role-templates, usr-user-assignment, usr-no-permission, xsuaa-q16-four-cases, project-xsuaa-login]
+officialDocs:
+  - title: SAP BTP 官方文档（检索 Role Collections / Users）
+    url: https://help.sap.com/docs/btp
+  - title: SAP Cloud Identity Services 文档
+    url: https://help.sap.com/docs/cloud-identity-services
+---
+
+## 6. 功能是什么？
+
+SAP BTP 中的用户授权链路是固定的四层：
+
+```text
+User（用户）
+  → Role Collection（角色集合，实际分配给用户的单元）
+    → Role（由应用 xs-security.json 的 Role Template 生成）
+      → Scope（最小权限点，代码里检查的对象）
+```
+
+<Callout type="info" title="术语解释">
+- **Scope**：应用里定义的权限点，例如 `Display`、`Admin`。
+- **Role Template**：`xs-security.json` 中把若干 Scope 组合起来的模板。
+- **Role**：实例创建后，Cockpit 里可见的具体角色。
+- **Role Collection**：把多个应用、多个 Role 打包，一次性分配给用户的容器。
+</Callout>
+
+用户**不能**被直接授予 Role 或 Scope；管理员在 Cockpit 中做的是「把 Role Collection 分配给用户」。
+
+## 7. 为什么需要这个功能？
+
+企业里一个用户往往需要访问多个应用，每个应用又有多套角色。如果逐个分配 Role，管理成本与出错概率都很高。Role Collection 提供一层业务语义的打包：例如「华东区销售经理」= 订单应用的 Viewer + 报表应用的 Analyst + 工作台访问权限。
+
+## 8. 实际业务应用场景
+
+- 新员工入职：分配一个 Role Collection 即可获得所需权限。
+- 岗位调整：换一个 Role Collection，权限一次性变更。
+- 企业 IdP 组映射：按 AD / IAS 用户组自动获得对应 Role Collection。
+- 最小权限审计：定期导出 Role Collection 分配清单复核。
+
+## 10. 操作前需要准备什么？
+
+| 准备项 | 说明 |
+| --- | --- |
+| 已部署的应用 Role | Cockpit → Security → Roles 中可见 |
+| 测试用户 | 至少两个：`<VIEWER_EMAIL>`、`<ADMIN_EMAIL>` |
+| 管理权限 | 能进入 Security → Users / Role Collections |
+| 身份提供方 | Trust Configuration 中已配置，用户可被检索到 |
+| 测试入口 | 一个带 Scope 校验的接口（见项目三 `/api/admin`） |
+
+## 11. 详细操作步骤
+
+1. 打开 Subaccount → **Security → Roles**，确认应用发布的 Role（例如 `Viewer`、`Administrator`）存在。若不存在，先执行 `cf update-service <XSUAA_INSTANCE> -c xs-security.json`。
+2. 打开 **Security → Role Collections**，选择新建入口，创建 `BTP-Learning-Viewer`。
+3. 在该 Role Collection 中把 `Viewer` Role 加入。
+4. 再创建 `BTP-Learning-Administrator`，把 `Administrator` Role 加入。
+5. 打开 **Security → Users**，检索 `<VIEWER_EMAIL>`，为其分配 `BTP-Learning-Viewer`。
+6. 检索 `<ADMIN_EMAIL>`，为其分配 `BTP-Learning-Administrator`。
+7. 用两个用户分别登录应用，对比 `/me` 返回的 scopes 与管理员接口的状态码。
+8. （可选）在 **Trust Configuration** 或 IAS 侧配置组/属性到 Role Collection 的自动映射；具体配置项名称以当前界面为准（**待验证**），不要照抄旧版教程。
+9. 回收权限时，在 Users 中取消 Role Collection 分配，再验证接口立即返回 403。
+
+## 12. 每一步需要填写的参数
+
+| 步骤 | 参数 | 示例 / 占位符 | 说明 |
+| --- | --- | --- | --- |
+| 2 | Role Collection 名称 | `BTP-Learning-Viewer` | 建议体现应用与岗位 |
+| 3 | 加入的 Role | `Viewer` | 名称来自 xs-security.json 的 role-templates |
+| 5 | 用户 | `<VIEWER_EMAIL>` | 必须能在 Users 中检索到 |
+| 8 | IdP 组 / 属性 | `<IDP_GROUP>` | 用于自动映射，名称以 IdP 断言为准 |
+| 9 | 回收操作 | 取消分配 | 通常立即生效，必要时重新登录 |
+
+## 13. 配置截图或界面示意图
+
+```mermaid
+flowchart LR
+  IDP[身份提供方用户 / 用户组] --> U[Subaccount Users]
+  RC1[BTP-Learning-Viewer] --> R1[Viewer Role]
+  RC2[BTP-Learning-Administrator] --> R2[Administrator Role]
+  R1 --> S1[Display Scope]
+  R2 --> S1
+  R2 --> S2[Admin Scope]
+  U --> RC1
+  U --> RC2
+  S1 --> API1[/api/orders 200]
+  S2 --> API2[/api/admin 200]
+```
+
+## 14. 完整配置文件
+
+Role Collection 是 Cockpit 对象，没有项目配置文件。但权限定义来源于 `xs-security.json`，下面给出与本文示例匹配的完整文件：
+
+```json
+{
+  "xsappname": "btp-learning-<SUBDOMAIN>",
+  "tenant-mode": "dedicated",
+  "description": "SAP BTP 中文学习中心 - Role Collection 示例",
+  "scopes": [
+    { "name": "$XSAPPNAME.Display", "description": "查看业务数据" },
+    { "name": "$XSAPPNAME.Admin", "description": "访问管理员功能" }
+  ],
+  "role-templates": [
+    {
+      "name": "Viewer",
+      "description": "业务查看者",
+      "scope-references": ["$XSAPPNAME.Display"]
+    },
+    {
+      "name": "Administrator",
+      "description": "管理员",
+      "scope-references": ["$XSAPPNAME.Display", "$XSAPPNAME.Admin"]
+    }
+  ]
+}
+```
+
+## 15. 完整代码示例
+
+后端检查 Scope 的完整中间件（与项目三一致，可独立使用）：
+
+```javascript
+'use strict';
+
+/**
+ * 生成 Express 风格的 Scope 校验中间件。
+ * req.authInfo 由 App Router / @sap/xssec 完成 JWT 校验后注入。
+ */
+function requireScope(fullScopeName) {
+  return function checkScope(req, res, next) {
+    const authInfo = req.authInfo;
+    if (!authInfo || typeof authInfo.checkScope !== 'function') {
+      return res.status(401).json({ error: 'Unauthorized', message: '请先登录' });
+    }
+    if (!authInfo.checkScope(fullScopeName)) {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: '当前用户缺少所需权限',
+        requiredScope: fullScopeName,
+      });
+    }
+    return next();
+  };
+}
+
+const express = require('express');
+const app = express();
+
+// 从环境变量注入完整 Scope 名，避免把 xsappname 写死在代码里
+const adminScope = process.env.ADMIN_SCOPE;
+const displayScope = process.env.DISPLAY_SCOPE;
+
+if (!adminScope || !displayScope) {
+  console.error('缺少 ADMIN_SCOPE / DISPLAY_SCOPE 环境变量');
+  process.exit(1);
+}
+
+app.get('/api/orders', requireScope(displayScope), (req, res) => {
+  res.json({ orders: [{ id: '001', amount: 100 }] });
+});
+
+app.get('/api/admin/summary', requireScope(adminScope), (req, res) => {
+  res.json({ message: '管理员数据' });
+});
+
+app.listen(process.env.PORT || 3001);
+```
+
+## 16. 命令行操作
+
+Cockpit 中的分配没有对应的 `cf` 命令，但以下步骤可用 CLI 辅助核对：
+
+```bash
+# 1) 确认目标环境与实例
+cf target
+cf services
+
+# 2) 查看 XSUAA 凭据中的 xsappname（输出含敏感信息，注意保管）
+cf env <APP>
+
+# 3) 若新增了 Scope / Role Template，更新实例并重新部署
+cf update-service <XSUAA_INSTANCE> -c xs-security.json
+cf restage <APP>
+
+# 4) 查看应用日志，确认 403 来自 Scope 校验而不是 token 校验失败
+cf logs <APP> --recent
+
+# 5) 导出 Service Key 供本地复现（含敏感信息）
+cf create-service-key <XSUAA_INSTANCE> <KEY_NAME>
+cf service-key <XSUAA_INSTANCE> <KEY_NAME>
+```
+
+参数解释：`cf update-service -c` 是「Role 列表不刷新」问题时最关键的修复命令；`cf restage` 让应用重新读取绑定与环境变量；`cf env` 用于核对 `xsappname`，从而拼出完整 Scope 名 `<XSAPPNAME>.Admin`。
+
+## 17. 执行后的预期结果
+
+- Role Collection 列表包含 `BTP-Learning-Viewer` 与 `BTP-Learning-Administrator`。
+- 两个 Role Collection 分别包含对应 Role。
+- Users 页面中两个测试用户各自只被分配一个 Role Collection。
+- Viewer 登录后 `/api/orders` 返回 200，`/api/admin/summary` 返回 403。
+- Administrator 登录后两个接口都返回 200。
+
+## 18. 如何验证是否成功
+
+1. 在 Users 页面打开用户详情，确认 Role Collection 分配已保存。
+2. 用无痕窗口分别登录两个用户，避免会话缓存干扰。
+3. 查看 `/me` 返回的 scopes 列表，确认与 Role 的 `scope-references` 一致。
+4. 取消分配后立即重试，确认 403 生效。
+5. 若权限未变化，重新登录以刷新 token 中的 scope。
+
+## 19. 常见错误及解决方案
+
+| 现象 | 原因 | 处理顺序 |
+| --- | --- | --- |
+| 403 但用户确实已授权 | Role Collection 未包含目标 Role / token 未刷新 | 核对 Role Collection 内容 → 重新登录 |
+| 401 而不是 403 | 未登录或 JWT 校验失败 | 检查 App Router 绑定、token 传递与 `cf logs` |
+| Users 中检索不到用户 | 用户不在已配置的 IdP / 未同步 | 检查 Trust Configuration 与 IAS 用户同步 |
+| Roles 中看不到应用 Role | `xs-security.json` 未更新到实例 | `cf update-service -c` 后重新部署 |
+| Scope 校验永远失败 | 代码里用了 `$XSAPPNAME.Admin` 字面量 | 使用 `<XSAPPNAME>.Admin` 完整名或从环境变量注入 |
+| 组映射不生效 | 断言属性名与配置不一致 | 在 IdP 侧核对实际属性名（**待验证**项需按当前文档配置） |
+
+## 20. 安全注意事项
+
+- 生产环境的 Administrator Role Collection 只分配给极少数账号，并记录审批。
+- 定期导出并复核 Role Collection 分配，回收离职与转岗账号。
+- 不要把管理员与业务权限打包进同一个 Role Collection。
+- 授权变更应写入审计记录；开启 Audit Log 便于追溯。
+- 组映射规则变更先在测试用户验证，避免批量误授权。
+
+## 21. 本章总结
+
+记住 **User → Role Collection → Role → Scope** 这条链路，以及 **401 查认证、403 查授权** 的分工。Role Collection 是 Cockpit 中实际分配给用户的单元，Role 来自 `xs-security.json` 的 Role Template，Scope 是代码最终检查的权限点。权限不生效时按「实例是否更新 → Role 是否存在 → Collection 是否包含 → 用户是否分配 → token 是否刷新」顺序排查。
+
+## 22. 实战练习
+
+1. 创建第三个 Role Collection，同时加入 Viewer 与 Administrator，观察用户获得的所有 Scope。
+2. 先授权再取消，记录 403 出现的时间点，理解 token 缓存的影响。
+3. 用 `cf env <APP>` 找到 `xsappname`，拼出完整 Scope 名并写入 `ADMIN_SCOPE` 环境变量。
+4. 完成 [四场景测试教程](/docs/xsuaa-q16-four-cases) 与 [项目三完整实战](/docs/project-xsuaa-login)。

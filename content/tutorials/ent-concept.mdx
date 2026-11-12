@@ -1,0 +1,228 @@
+---
+title: Entitlements 与 Quotas：服务配额权利和配额不足排查
+description: 讲清 Entitlements 与 Quotas 的区别、服务计划分配流程、多 Subaccount 配额规划，以及配额不足类错误的系统化排查。
+difficulty: 入门
+duration: 35 分钟
+audience: BTP 管理员、架构师、实施顾问
+keywords: [Entitlements, Quotas, Service Plan, Subaccount, 配额不足]
+updated: 2026-11-10
+docVersion: SAP Help Portal「Entitlements / Quotas」当前版本
+objectives:
+  - 能区分 Entitlements 与 Quotas 两类约束
+  - 能把服务计划配额分配到 Subaccount
+  - 能规划多 Subaccount 的配额比例
+  - 能按固定顺序排查配额不足错误
+prerequisites:
+  - 已阅读「BTP 账号体系」
+  - 拥有 Global Account 查看或管理权限
+cockpitPath: Global Account → Entitlements；Subaccount → Entitlements；Subaccount → Cloud Foundry → Spaces / Space Quotas
+related: [ent-service-entitlements, ent-assign, ent-cf-quota, ent-insufficient, services-marketplace, ua-quota-monitor]
+officialDocs:
+  - title: SAP BTP 官方文档（检索 Entitlements / Quotas）
+    url: https://help.sap.com/docs/btp
+  - title: SAP Discovery Center
+    url: https://discovery-center.cloud.sap/
+caveat: 服务计划名称、分配单位与可用数量由合同与账号类型决定；Trial / Free Tier / 商业账号差异较大，请以当前租户 Entitlements 页面显示为准。
+---
+
+## 6. 功能是什么？
+
+**Entitlements（配额权利）** 表示「有权使用哪些服务、哪些计划、多少数量」。它来自合同或免费层级，由 Global Account 持有并向 Directory / Subaccount 分配。
+
+**Quotas（配额）** 表示运行环境的资源上限，例如 Cloud Foundry Org 的内存总量、Space 可创建的应用实例数与服务实例数。
+
+<Callout type="info" title="一句话区分">
+Entitlements 管「能不能用某个服务计划」，Quotas 管「这个环境能用多少内存和实例」。两者都会导致创建失败，但报错与处理方式不同。
+</Callout>
+
+## 7. 为什么需要这个功能？
+
+企业采购的服务能力是有限的，需要在多个环境间分配。没有 Entitlements 概念，就无法解释「为什么 Service Marketplace 里看不到某服务」，也无法控制生产环境的成本与容量。
+
+## 8. 实际业务应用场景
+
+- 新项目启动：为 Dev / Test / Prod 分配服务计划配额。
+- Service Marketplace 看不到目标服务时定位原因。
+- 生产环境预留余量，避免上线时配额耗尽。
+- 按业务单元做成本归因与资源优化。
+
+## 10. 操作前需要准备什么？
+
+| 准备项 | 说明 |
+| --- | --- |
+| 权限 | Global Account 的 Entitlements 管理或查看权限 |
+| 服务清单 | 项目所需服务与计划名称 |
+| 环境清单 | 各 Subaccount 的用途（Dev / Test / Prod） |
+| 核对来源 | Discovery Center 确认区域与计划可用性 |
+
+## 11. 详细操作步骤
+
+1. 打开 Global Account → **Entitlements**，查看所有服务计划的「可用数量 / 已分配数量」。
+2. 找到目标服务与计划，确认是否还有可分配余量。
+3. 打开分配入口，选择目标 Subaccount（或 Directory），填写 `<ASSIGNED_AMOUNT>`。
+4. 保存后进入该 Subaccount 的 **Entitlements** 页核对分配结果。
+5. 打开 **Services → Service Marketplace**，确认该服务现在可见。
+6. 用 `cf marketplace` 交叉核对计划名。
+7. 若创建实例仍失败，检查 Space Quota 与 Org 内存限制（Quotas 层）。
+8. 定期在 Usage Analytics 中查看消费趋势，按需调整分配。
+
+## 12. 每一步需要填写的参数
+
+| 参数 | 占位符 / 示例 | 说明 |
+| --- | --- | --- |
+| 服务名 | `<SERVICE>` | 与 Marketplace 一致 |
+| 服务计划 | `<PLAN>` | 不同账号类型可用计划不同 |
+| 目标 Subaccount | `<SUBACCOUNT_NAME>` | 配额接收方 |
+| 分配数量 | `<ASSIGNED_AMOUNT>` | 不能超过 Global Account 可用量 |
+| Space Quota | `<SPACE_QUOTA_NAME>` | 运行环境层资源上限 |
+| Org 内存 | `<ORG_MEMORY_LIMIT>` | Org 级上限 |
+
+## 13. 配置截图或界面示意图
+
+```mermaid
+flowchart LR
+  CONTRACT[合同 / 免费层级] --> GA[Global Account 可用量]
+  GA -->|分配 <ASSIGNED_AMOUNT>| SA[Subaccount]
+  SA --> MP[Service Marketplace 可见]
+  MP --> SI[服务实例消费]
+  ORG[Org / Space Quotas] -.限制.-> SI
+```
+
+## 14. 完整配置文件
+
+配额分配是 Cockpit 操作，建议维护一份台账（YAML 示意，非官方导入格式）：
+
+```yaml
+# Entitlements 分配台账（示意文档，不是 SAP 官方配置格式）
+globalAccount: "<GLOBAL_ACCOUNT_NAME>"
+allocations:
+  - service: "xsuaa"
+    plan: "<PLAN>"
+    dev: 2
+    test: 2
+    prod: 3
+  - service: "destination"
+    plan: "<PLAN>"
+    dev: 1
+    test: 1
+    prod: 2
+policy:
+  reserveForProduction: true
+  reviewCycle: "monthly"
+note: "服务与计划名以实际 Marketplace 为准；本文件不含任何凭据。"
+```
+
+## 15. 完整代码示例
+
+下面的脚本用于把台账中的分配量与 Global Account 可用量做本地校验，避免超分配：
+
+```javascript
+'use strict';
+
+// 台账结构示意：可在评审阶段用真实数字替换，脚本只做算术校验
+const available = Number(process.env.AVAILABLE_AMOUNT || 0);
+const allocations = {
+  dev: Number(process.env.ALLOC_DEV || 0),
+  test: Number(process.env.ALLOC_TEST || 0),
+  prod: Number(process.env.ALLOC_PROD || 0),
+};
+
+if (available <= 0) {
+  console.error('请设置 AVAILABLE_AMOUNT 为 Global Account 的实际可用量。');
+  process.exit(1);
+}
+
+const total = Object.values(allocations).reduce((sum, n) => sum + n, 0);
+console.log(`可用量：${available}`);
+for (const [env, value] of Object.entries(allocations)) {
+  console.log(`${env}: ${value}`);
+}
+console.log(`合计分配：${total}，剩余：${available - total}`);
+
+if (total > available) {
+  console.error('分配量超过可用量，请调整后再在 Cockpit 中执行分配。');
+  process.exit(1);
+}
+console.log('台账校验通过。');
+```
+
+## 16. 命令行操作
+
+```bash
+# 1) 查看当前 Space 可见的服务与计划（验证分配是否生效）
+cf marketplace
+
+# 2) 查看当前 Space 已有服务实例（盘点消费）
+cf services
+
+# 3) 查看应用与实例数（配合 Quota 判断）
+cf apps
+cf app <APP>
+
+# 4) 查看 Space 配额定义
+cf space-quotas
+
+# 5) 尝试创建实例，观察配额相关报错
+cf create-service <SERVICE> <PLAN> <INSTANCE>
+
+# 6) 本地台账校验
+AVAILABLE_AMOUNT=<AVAILABLE> ALLOC_DEV=2 ALLOC_TEST=2 ALLOC_PROD=3 node check-entitlements.js
+# Windows PowerShell：
+# $env:AVAILABLE_AMOUNT="<AVAILABLE>"; $env:ALLOC_DEV="2"; node check-entitlements.js
+```
+
+参数解释：`cf marketplace` 是最快的分配结果验证手段；`cf services` 与 `cf apps` 用于盘点消费；`cf space-quotas` 查看运行环境层配额；`cf create-service` 的三个参数分别是服务名、计划名、实例名。
+
+## 17. 执行后的预期结果
+
+- Global Account → Entitlements 中该服务的「已分配」数量增加 `<ASSIGNED_AMOUNT>`。
+- 目标 Subaccount 的 Entitlements 页显示该服务计划可用。
+- `cf marketplace` 中出现该服务与计划。
+- 台账脚本输出：
+
+```text
+可用量：10
+dev: 2
+test: 2
+prod: 3
+合计分配：7，剩余：3
+台账校验通过。
+```
+
+## 18. 如何验证是否成功
+
+1. 分配数值在 Global Account 与 Subaccount 两侧一致。
+2. `cf marketplace` 能看到目标服务。
+3. 能成功创建至少一个服务实例。
+4. 台账合计不超过 Global Account 可用量。
+5. 生产环境保留足够余量应对扩容。
+
+## 19. 常见错误及解决方案
+
+| 现象 | 约束层 | 处理 |
+| --- | --- | --- |
+| Marketplace 看不到服务 | Entitlements / Region | 分配服务计划；Discovery Center 核对区域 |
+| 创建实例报 quota 不足 | Entitlements 或 Space Quota | 先查分配量，再查 Space Quota |
+| `cf push` 内存不足 | Org / Space Quota | 缩减实例数、内存或申请更多配额 |
+| 分配量不可编辑 | 可用量已全部分配 | 从低优先级 Subaccount 回收 |
+| Trial 找不到企业级服务 | 账号类型限制 | 换商业账号或改用可用替代服务 |
+| 服务名与文档不一致 | 产品版本差异 | 以当前 Marketplace 显示为准 |
+
+## 20. 安全注意事项
+
+- 只有 Global Account 管理员能调整分配，变更要记录审批。
+- 生产配额不要被临时测试占用，定期复核台账。
+- 配额调整可能影响运行中的实例，操作前评估影响面。
+- 台账文件不含任何凭据，但可能暴露容量规划，注意共享范围。
+- Trial / Free Tier 的能力差异要写进项目计划，避免上线前才发现不可用。
+
+## 21. 本章总结
+
+Entitlements 是服务计划级的「使用权」，Quotas 是运行环境的「容量上限」。遇到「服务看不到」先查 Entitlements 与区域；遇到「创建失败 / 内存不足」再查 Quotas 与实际消费。多 Subaccount 环境应维护台账并给生产预留余量。
+
+## 22. 实战练习
+
+1. 把某服务的 Entitlement 分配量改为 0，观察 `cf marketplace` 与创建实例的报错，再恢复。
+2. 用台账脚本为三环境设计分配方案，并说明生产为何要预留余量。
+3. 在 Cockpit 中对比 Entitlements 页面与 Usage Analytics 的「已分配 / 已消费」差异。
+4. 继续 [Usage Analytics 用量分析](/docs/ua-concept) 与 [服务管理实操](/docs/services-marketplace)。
